@@ -13,13 +13,12 @@ from fastapi.security import OAuth2PasswordBearer
 router = APIRouter(tags=["Authentication"], prefix="")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-
 @router.post("/login")
 async def login(
     user_credentials: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    # what do when username are the same
+    # what to do when username are the same
     user = (
         db.query(User_DB).filter(User_DB.username == user_credentials.username).first()
     )

@@ -2,20 +2,20 @@ from fastapi import APIRouter, Depends, status, HTTPException, Response
 from database import get_db
 from sqlalchemy.orm import Session
 from models import Message_DB
-from utils import get_current_user
+from utils import login_user
 from .schema import Message
 
 
 router = APIRouter(
-    prefix="/messages",
+    prefix="/api/v1/messages",
 )
 
 
-@router.post("/")
+@router.post("")
 async def create_message(
     message: Message,
     db: Session = Depends(get_db),
-    _: int = Depends(get_current_user),
+    _: int = Depends(login_user),
 ):
     new_message = Message_DB(**message.dict())
     db.add(new_message)
@@ -24,9 +24,10 @@ async def create_message(
     return new_message
 
 
-@router.get("/")
+@router.get("")
 async def read_message(
-    db: Session = Depends(get_db), _: int = Depends(get_current_user)
+    db: Session = Depends(get_db), 
+    _: int = Depends(login_user)
 ):
     message_query = db.query(Message_DB).order_by(Message_DB.message_id.desc()).limit(10)
     if message_query.first == None:

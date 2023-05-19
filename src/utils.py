@@ -44,7 +44,7 @@ def verify_access_token(token: str, credentials_expection):
     return tokendata
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def login_user(token: str = Depends(oauth2_scheme)):
     credentials_expection = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=f"Could not validate credentials",
