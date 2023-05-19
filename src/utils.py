@@ -5,12 +5,23 @@ from fastapi.param_functions import Depends
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from jose import JWSError, jwt
+from config import config
 
 from schema import TokenData
 
-SECRET_KEY = "e461005220398152091142c3bdc709cde98651b6356c6afd94b42305d7d72392"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY: str | None = config["SECRET_KEY"]
+ALGORITHM: str | None = config["ALGORITHM"]
+ACCESS_TOKEN_EXPIRE_MINUTES = config["ACCESS_TOKEN_EXPIRE_MINUTES"]
+
+if ACCESS_TOKEN_EXPIRE_MINUTES is None:
+    raise Exception('ACCESS_TOKEN_EXPIRE_MINUTES is missing, edit .env')
+else:
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(ACCESS_TOKEN_EXPIRE_MINUTES)
+if ALGORITHM is None:
+    raise Exception('ALGORITHM is missing, edit .env')
+if SECRET_KEY is None:
+    raise Exception('SECRET_KEY is missing, edit .env')
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 

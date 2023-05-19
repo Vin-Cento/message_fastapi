@@ -3,20 +3,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User_DB
-from .schema import User_Create
-from utils import hash
 
 router = APIRouter(prefix="/users")
-
-
-@router.post("/")
-async def create_user(user: User_Create, db: Session = Depends(get_db)):
-    user.password = hash(user.password)
-    new_user = User_DB(**user.dict())
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
 
 
 @router.get("/{id}")
