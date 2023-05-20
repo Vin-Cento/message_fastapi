@@ -13,6 +13,10 @@ from fastapi.security import OAuth2PasswordBearer
 from database import get_db
 from utils import login_user, verify, create_access_token, hash
 
+import random
+
+random.seed()
+
 
 router = APIRouter(tags=["Authentication"], prefix="")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -26,12 +30,13 @@ async def create_user(user_new: SignupForm, db: Session = Depends(get_db)):
         db.add(new_user)
         db.flush()
     except IntegrityError:
-        # unique_id has max of 4 characters
         db.rollback()
-        unique_id: str = str(db.query(UserDB).count())[:4]
+        unique_usernames: str = str(
+            [user_new.username + str(random.randint(0, 99)) for _ in range(4)]
+        )
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail=f"User {user_new.username} already taken, try {user_new.username + unique_id}",
+            detail=f"{user_new.username} taken, try {unique_usernames}",
         )
     db.commit()
     return Response(status_code=status.HTTP_200_OK)
