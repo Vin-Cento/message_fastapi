@@ -92,7 +92,7 @@ async def update_password(
 ):
     users_select = db.query(UserDB).filter(UserDB.username == user_input.username)
     user_obj = users_select.first()
-    if user_obj == None:
+    if user_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
@@ -112,10 +112,13 @@ async def update_username(
             UserDB.username == user_input.username_new,
         )
     )
-    user_obj = users_select.where(UserDB.username == user_input.username).first()
-    user_new_obj = users_select.where(
-        UserDB.username == user_input.username_new
-    ).first()
+    user_obj, user_create_obj, id = None, None, 0
+    for user in users_select.all():
+        if user_input.username == user.username:
+            user_obj = user
+            id = user.user_id
+        if user_input.username_new == user.username:
+            user_create_obj = user
     # check if current username exist
     if user_obj is None:
         raise HTTPException(
@@ -123,13 +126,13 @@ async def update_username(
             detail=f"Invalid Credentials",
         )
     # check if new username_new is new
-    if user_new_obj is not None:
+    if user_create_obj is not None:
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"{user_input.username_new} already taken",
         )
     else:
-        users_select.where(UserDB.username == user_input.username).update(
+        db.query(UserDB).filter(UserDB.user_id == id).update(
             {"username": user_input.username_new}, synchronize_session=False
         )
         db.commit()
