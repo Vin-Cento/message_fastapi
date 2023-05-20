@@ -7,7 +7,6 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from messages import view as messages
 from auth import view as auth
-from users import view as users
 # from books import view as book
 
 Base = declarative_base()
@@ -38,4 +37,3 @@ async def root():
 
 app.include_router(messages.router)
 app.include_router(auth.router)
-app.include_router(users.router)

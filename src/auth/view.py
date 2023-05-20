@@ -1,39 +1,40 @@
+from models import UserDB
+
 from fastapi import APIRouter, Depends, status, HTTPException, Response
-from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User_DB
-from users.schema import User_Create
-from .schema import Update_Username, Update_Password
+from fastapi.security import OAuth2PasswordRequestForm
+from .schema import UpdateUsernameForm, UpdatePasswordForm, SignupForm
+
 from schema import Token
+from fastapi.security import OAuth2PasswordBearer
+
+from database import get_db
 from utils import login_user, verify, create_access_token, hash
 
-from fastapi.security import OAuth2PasswordBearer
 
 router = APIRouter(tags=["Authentication"], prefix="")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @router.post("/signup")
-async def create_user(user: User_Create, db: Session = Depends(get_db)):
-    # making sure username doesn't already exist
-    # changing this code might effect login()
-    does_exist = db.query(User_DB).filter(User_DB.username == user.username).first()
-    if does_exist is None:
-        user.password = hash(user.password)
-        new_user = User_DB(**user.dict())
+async def create_user(user_new: SignupForm, db: Session = Depends(get_db)):
+    try:
+        user_new.password = hash(user_new.password)
+        new_user = UserDB(**user_new.dict())
         db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return Response(status_code=status.HTTP_200_OK)
-    else:
+        db.flush()
+    except IntegrityError:
         # unique_id has max of 4 characters
-        unique_id: str = str(db.query(User_DB).count())[:4]
+        db.rollback()
+        unique_id: str = str(db.query(UserDB).count())[:4]
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail=f"User {user.username} already taken, try {user.username + unique_id}",
+            detail=f"User {user_new.username} already taken, try {user_new.username + unique_id}",
         )
+    db.commit()
+    return Response(status_code=status.HTTP_200_OK)
 
 
 @router.post("/login", response_model=Token)
@@ -42,9 +43,7 @@ async def login(
     db: Session = Depends(get_db),
 ):
     # assuming username are unique
-    user = (
-        db.query(User_DB).filter(User_DB.username == user_credentials.username).first()
-    )
+    user = db.query(UserDB).filter(UserDB.username == user_credentials.username).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
@@ -63,12 +62,12 @@ async def delect_account(
     db: Session = Depends(get_db),
 ):
     # assuming username are unique
-    user = db.query(User_DB).filter(User_DB.username == user_credentials.username)
+    user = db.query(UserDB).filter(UserDB.username == user_credentials.username)
     if not user.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
-    if not verify(user_credentials.password, user.first().password):
+    if not verify(user_credentials.password, user.first().password):  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
@@ -78,9 +77,9 @@ async def delect_account(
 
 @router.put("/reset_password", status_code=status.HTTP_204_NO_CONTENT)
 async def update_password(
-    user_input: Update_Password, db: Session = Depends(get_db), _=Depends(login_user)
+    user_input: UpdatePasswordForm, db: Session = Depends(get_db), _=Depends(login_user)
 ):
-    user = db.query(User_DB).filter(User_DB.username == user_input.username)
+    user = db.query(UserDB).filter(UserDB.username == user_input.username)
     if user.first() == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="id:not found"
@@ -91,14 +90,15 @@ async def update_password(
 
 @router.put("/reset_username", status_code=status.HTTP_204_NO_CONTENT)
 async def update_username(
-    user_input: Update_Username, db: Session = Depends(get_db), _=Depends(login_user)
+    user_input: UpdateUsernameForm, db: Session = Depends(get_db), _=Depends(login_user)
 ):
-    user = db.query(User_DB).filter(User_DB.username == user_input.username)
+    user = db.query(UserDB).filter(UserDB.username == user_input.username)
     if user.first() == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"username: {user_input.username} not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"username: {user_input.username} not found",
         )
-    user_new= db.query(User_DB).filter(User_DB.username == user_input.username_new)
+    user_new = db.query(UserDB).filter(UserDB.username == user_input.username_new)
     # TODO: make this one query
     # check if the new username_new is taken or not
     if user_new.first() == None:

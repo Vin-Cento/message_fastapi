@@ -6,12 +6,13 @@ Base = declarative_base()
 
 
 # model
-class User_DB(Base):
+class UserDB(Base):
     __tablename__ = "user"
     user_id = Column(Integer, primary_key=True)
     username = Column(
         String(40).with_variant(VARCHAR(40, charset="utf8"), "mysql", "mariadb"),
         nullable=False,
+        unique=True,
     )
     # TODO: add email
     # email = Column()
