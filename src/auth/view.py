@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from models import UserDB
 
 from fastapi import APIRouter, Depends, status, HTTPException, Response
@@ -48,14 +49,17 @@ async def login(
     db: Session = Depends(get_db),
 ):
     # assuming username are unique
-    user_obj = db.query(UserDB).filter(UserDB.username == passrequest_form.username).first()
+    user_obj = (
+        db.query(UserDB).filter(UserDB.username == passrequest_form.username).first()
+    )
     if user_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
     if not verify(passrequest_form.password, user_obj.password):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials: no password"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Invalid Credentials: no password",
         )
     access_token = create_access_token(data={"user_id": user_obj.user_id})
     return {"token": access_token}
@@ -66,14 +70,15 @@ async def delect_account(
     passrequest_form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    # assuming username are unique
     users_select = db.query(UserDB).filter(UserDB.username == passrequest_form.username)
     user_obj = users_select.first()
+    # check if username exist
     if user_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
-    if not verify(passrequest_form.password, users_select.first().password):  # type: ignore
+    # check if password works
+    if not verify(passrequest_form.password, user_obj.password):  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
@@ -89,9 +94,11 @@ async def update_password(
     user_obj = users_select.first()
     if user_obj == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="id:not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
-    users_select.update({"password": hash(user_input.password_new)}, synchronize_session=False)
+    users_select.update(
+        {"password": hash(user_input.password_new)}, synchronize_session=False
+    )
     db.commit()
 
 
@@ -99,21 +106,30 @@ async def update_password(
 async def update_username(
     user_input: UpdateUsernameForm, db: Session = Depends(get_db), _=Depends(login_user)
 ):
-    users_select = db.query(UserDB).filter(UserDB.username == user_input.username)
-    user_obj = users_select.first()
-    if user_obj == None:
+    users_select = db.query(UserDB).filter(
+        or_(
+            UserDB.username == user_input.username,
+            UserDB.username == user_input.username_new,
+        )
+    )
+    user_obj = users_select.where(UserDB.username == user_input.username).first()
+    user_new_obj = users_select.where(
+        UserDB.username == user_input.username_new
+    ).first()
+    # check if current username exist
+    if user_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"username: {user_input.username} not found",
+            detail=f"Invalid Credentials",
         )
-    user_new = db.query(UserDB).filter(UserDB.username == user_input.username_new)
-    # TODO: make this one query
-    # check if the new username_new is taken or not
-    if user_new.first() == None:
+    # check if new username_new is new
+    if user_new_obj is not None:
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail=f"User {user_input.username_new} already taken",
+            detail=f"{user_input.username_new} already taken",
         )
     else:
-        users_select.update({"username": user_input.username_new}, synchronize_session=False)
+        users_select.where(UserDB.username == user_input.username).update(
+            {"username": user_input.username_new}, synchronize_session=False
+        )
         db.commit()
