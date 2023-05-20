@@ -23,20 +23,20 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @router.post("/signup")
-async def create_user(user_new: SignupForm, db: Session = Depends(get_db)):
+async def create_user(signup_form: SignupForm, db: Session = Depends(get_db)):
     try:
-        user_new.password = hash(user_new.password)
-        new_user = UserDB(**user_new.dict())
-        db.add(new_user)
+        signup_form.password = hash(signup_form.password)
+        user_obj = UserDB(**signup_form.dict())
+        db.add(user_obj)
         db.flush()
     except IntegrityError:
         db.rollback()
         unique_usernames: str = str(
-            [user_new.username + str(random.randint(0, 99)) for _ in range(4)]
+            [signup_form.username + str(random.randint(0, 99)) for _ in range(4)]
         )
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail=f"{user_new.username} taken, try {unique_usernames}",
+            detail=f"{signup_form.username} taken, try {unique_usernames}",
         )
     db.commit()
     return Response(status_code=status.HTTP_200_OK)
@@ -44,39 +44,40 @@ async def create_user(user_new: SignupForm, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 async def login(
-    user_credentials: OAuth2PasswordRequestForm = Depends(),
+    passrequest_form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
     # assuming username are unique
-    user = db.query(UserDB).filter(UserDB.username == user_credentials.username).first()
-    if not user:
+    user_obj = db.query(UserDB).filter(UserDB.username == passrequest_form.username).first()
+    if user_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
-    if not verify(user_credentials.password, user.password):
+    if not verify(passrequest_form.password, user_obj.password):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials: no password"
         )
-    access_token = create_access_token(data={"user_id": user.user_id})
+    access_token = create_access_token(data={"user_id": user_obj.user_id})
     return {"token": access_token}
 
 
 @router.delete("/delete_account", status_code=status.HTTP_204_NO_CONTENT)
 async def delect_account(
-    user_credentials: OAuth2PasswordRequestForm = Depends(),
+    passrequest_form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
     # assuming username are unique
-    user = db.query(UserDB).filter(UserDB.username == user_credentials.username)
-    if not user.first():
+    users_select = db.query(UserDB).filter(UserDB.username == passrequest_form.username)
+    user_obj = users_select.first()
+    if user_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
-    if not verify(user_credentials.password, user.first().password):  # type: ignore
+    if not verify(passrequest_form.password, users_select.first().password):  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials"
         )
-    user.delete(synchronize_session=False)
+    users_select.delete(synchronize_session=False)
     db.commit()
 
 
@@ -84,12 +85,13 @@ async def delect_account(
 async def update_password(
     user_input: UpdatePasswordForm, db: Session = Depends(get_db), _=Depends(login_user)
 ):
-    user = db.query(UserDB).filter(UserDB.username == user_input.username)
-    if user.first() == None:
+    users_select = db.query(UserDB).filter(UserDB.username == user_input.username)
+    user_obj = users_select.first()
+    if user_obj == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="id:not found"
         )
-    user.update({"password": hash(user_input.password_new)}, synchronize_session=False)
+    users_select.update({"password": hash(user_input.password_new)}, synchronize_session=False)
     db.commit()
 
 
@@ -97,8 +99,9 @@ async def update_password(
 async def update_username(
     user_input: UpdateUsernameForm, db: Session = Depends(get_db), _=Depends(login_user)
 ):
-    user = db.query(UserDB).filter(UserDB.username == user_input.username)
-    if user.first() == None:
+    users_select = db.query(UserDB).filter(UserDB.username == user_input.username)
+    user_obj = users_select.first()
+    if user_obj == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"username: {user_input.username} not found",
@@ -112,5 +115,5 @@ async def update_username(
             detail=f"User {user_input.username_new} already taken",
         )
     else:
-        user.update({"username": user_input.username_new}, synchronize_session=False)
+        users_select.update({"username": user_input.username_new}, synchronize_session=False)
         db.commit()
