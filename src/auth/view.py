@@ -62,7 +62,7 @@ async def login(
             detail=f"Invalid Credentials: no password",
         )
     access_token = create_access_token(data={"user_id": user_obj.user_id})
-    return {"token": access_token}
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.delete("/delete_account", status_code=status.HTTP_204_NO_CONTENT)
@@ -113,7 +113,7 @@ async def update_username(
             UserDB.username == user_input.username_new,
         )
     )
-    user_obj, user_create_obj, id = None, None, 0
+    user_obj, user_create_obj, id = None, None, None
     for user in users_select.all():
         if user_input.username == user.username:
             user_obj = user

@@ -14,13 +14,13 @@ ALGORITHM: str | None = config["ALGORITHM"]
 ACCESS_TOKEN_EXPIRE_MINUTES = config["ACCESS_TOKEN_EXPIRE_MINUTES"]
 
 if ACCESS_TOKEN_EXPIRE_MINUTES is None:
-    raise Exception('ACCESS_TOKEN_EXPIRE_MINUTES is missing, edit .env')
+    raise Exception("ACCESS_TOKEN_EXPIRE_MINUTES is missing, edit .env")
 else:
     ACCESS_TOKEN_EXPIRE_MINUTES = int(ACCESS_TOKEN_EXPIRE_MINUTES)
 if ALGORITHM is None:
-    raise Exception('ALGORITHM is missing, edit .env')
+    raise Exception("ALGORITHM is missing, edit .env")
 if SECRET_KEY is None:
-    raise Exception('SECRET_KEY is missing, edit .env')
+    raise Exception("SECRET_KEY is missing, edit .env")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
