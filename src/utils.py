@@ -3,8 +3,9 @@ from fastapi import status
 from fastapi.exceptions import HTTPException
 from fastapi.param_functions import Depends
 from fastapi.security import OAuth2PasswordBearer
+from jose.exceptions import JWTError
 from passlib.context import CryptContext
-from jose import JWSError, jwt
+from jose import jwt
 from config import config
 
 from schema import TokenData
@@ -49,7 +50,7 @@ def verify_access_token(token: str, credentials_expection):
         if id is None:
             raise credentials_expection
         tokendata = TokenData(id=id)
-    except JWSError:
+    except JWTError:
         raise credentials_expection
     return tokendata
 

@@ -36,35 +36,30 @@ def delete_account(username, password, token):
     res = requests.delete(f"{ENDPOINT}", data=payload, headers=headers)
     return res
 
-
-# sign up with new user
 user, wrong_user, password, wrong_password = "new_user", "wrong_user", "password", "pas"
+
+print("test signing")
 assert signup(user, password).status_code == 200
-# sign up with existing user
 assert signup(user, password).status_code == 406
 
-# login with wrong credential
+print("testing login")
 assert login(user, wrong_password).status_code == 404
 assert login(wrong_user, password).status_code == 404
 assert login(wrong_user, wrong_password).status_code == 404
 
 # login correctly and get token
 res = login(user, password)
-token = eval(res.content.decode("utf-8"))["token"]
+token = eval(res.content.decode("utf-8"))["access_token"]
 wrong_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJleHAiOjE2ODQ2MjkyMDR9.JN_dHRt88wiJmphGZt37wLxc6gFNf6BnjZyGQ6sakL0"
 assert res.status_code == 200
 
-# delete empty account
+print("testing delete")
 assert delete_account(wrong_user, password, token).status_code == 404
-# delete bad password
 assert delete_account(user, wrong_password, token).status_code == 404
-# delete bad token
-assert delete_account(user, wrong_password, wrong_token).status_code == 404
+assert delete_account(user, wrong_password, wrong_token).status_code == 401
 
-# delete created account
+print("delete new account")
 assert delete_account(user, password, token).status_code == 204
-# delete deleted acount
 assert delete_account(user, password, token).status_code == 404
 
-# login with deleted acount
 assert login(user, password).status_code == 404
