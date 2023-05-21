@@ -69,6 +69,7 @@ async def login(
 async def delect_account(
     passrequest_form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
+    _=Depends(login_user),
 ):
     users_select = db.query(UserDB).filter(UserDB.username == passrequest_form.username)
     user_obj = users_select.first()

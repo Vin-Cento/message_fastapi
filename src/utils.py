@@ -46,7 +46,6 @@ def verify_access_token(token: str, credentials_expection):
     try:
         payload = jwt.decode(token, key=SECRET_KEY, algorithms=ALGORITHM)
         id = payload["user_id"]
-        print(id)
         if id is None:
             raise credentials_expection
         tokendata = TokenData(id=id)
