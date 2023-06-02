@@ -25,16 +25,18 @@ async def create_message(
 
 
 @router.get("")
-async def read_message(
-    db: Session = Depends(get_db), 
-    _: int = Depends(login_user)
-):
-    message_query = db.query(Message_DB).order_by(Message_DB.message_id.desc()).limit(10)
+async def read_message(db: Session = Depends(get_db), _: int = Depends(login_user)):
+    message_query = (
+        db.query(Message_DB).order_by(Message_DB.message_id.desc()).limit(10)
+    )
     if message_query.first == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"message is empty"
         )
-    return [{"message_id": message.message_id, "message": message.message} for message in message_query.all()]
+    return [
+        {"message_id": message.message_id, "message": message.message}
+        for message in message_query.all()
+    ]
 
 
 @router.get("/{id}")
