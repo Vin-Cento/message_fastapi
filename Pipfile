@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+python-dotenv = "*"
+fastapi = "*"
+sqlalchemy = "*"
+mysqlclient = "*"
+python-multipart = "*"
+passlib = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+
+[dev-packages]
+pytest = "*"
+neovim = "*"
+uvicorn = "*"
+black = "*"
+alembic = "*"
+requests = "*"
+
+[requires]
+python_version = "3.11"
